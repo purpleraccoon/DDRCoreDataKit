@@ -35,37 +35,37 @@ public protocol DDRManagedObject {
     static func entityName() -> String
 
     /// NSEntityDescription for the NSManagedObject subclass for this entity
-    static func entity(managedObjectContext: NSManagedObjectContext!) -> NSEntityDescription!
+    static func entity(_ managedObjectContext: NSManagedObjectContext!) -> NSEntityDescription!
 
     /// NSFetchRequest for the NSManagedObject subclass for this entity
-    static func fetchRequest() -> NSFetchRequest
+    static func fetchRequest() -> NSFetchRequest<NSFetchRequestResult>
 
     /// allInstancesInManagedObjectContext get objects of this entity that match predicate and sorted by sort descriptors
     /// - parameter moc: the NSManagedObjectContext to use
     /// - parameter predicate: the NSPredicate to limit which objects are returned
     /// - parameter sortedBy: array of NSSortDescriptor to use to sort the returned array
     /// - returns: array of instances that match pedicate sorted by sortDescriptors
-    static func instancesInManagedObjectContext(moc: NSManagedObjectContext, withPredicate predicate: NSPredicate?, sortedBy sortDescriptors : [NSSortDescriptor]?, catchError: Bool) throws -> [AnyObject]
+    static func instancesInManagedObjectContext(_ moc: NSManagedObjectContext, withPredicate predicate: NSPredicate?, sortedBy sortDescriptors : [NSSortDescriptor]?, catchError: Bool) throws -> [AnyObject]
 
     /// get objects of this entity that match predicate
     ///
     /// - parameter moc: the NSManagedObjectContext to use
     /// - parameter predicate: [NSManagedObject] match predicate
     /// - returns: array of [NSManagedObject]
-    static func instancesInManagedObjectContext(moc: NSManagedObjectContext, withPredicate predicate: NSPredicate?, catchError: Bool) throws -> [AnyObject]
+    static func instancesInManagedObjectContext(_ moc: NSManagedObjectContext, withPredicate predicate: NSPredicate?, catchError: Bool) throws -> [AnyObject]
 
     /// get objects of this entity sorted by specified sort descriptors
     ///
     /// - parameter moc: the NSManagedObjectContext to use
     /// - parameter predicate: [NSManagedObject] match predicate
     /// - returns: array of [NSManagedObject]
-    static func allInstancesInManagedObjectContext(moc: NSManagedObjectContext, sortedBy sortDescriptors: [NSSortDescriptor], catchError: Bool) throws -> [AnyObject]
+    static func allInstancesInManagedObjectContext(_ moc: NSManagedObjectContext, sortedBy sortDescriptors: [NSSortDescriptor], catchError: Bool) throws -> [AnyObject]
 
     /// get all objects of this entity
     ///
     /// - parameter moc the NSManagedObjectContext to use
     /// - returns: array of [NSManagedObject]
-    static func allInstancesInManagedObjectContext(moc : NSManagedObjectContext, catchError: Bool) throws -> [AnyObject]!
+    static func allInstancesInManagedObjectContext(_ moc : NSManagedObjectContext, catchError: Bool) throws -> [AnyObject]!
 
     /// an NSManagedObject for the same object using the specifed managedObjectContext (or nil if non-temporary objectID)
     ///
@@ -80,7 +80,7 @@ public protocol DDRManagedObject {
     var managedObjectContext: NSManagedObjectContext? { get }
     var objectID: NSManagedObjectID { get }
 
-    static func deleteObjectAndProcessPendingChanges(obj: NSManagedObject)
+    static func deleteObjectAndProcessPendingChanges(_ obj: NSManagedObject)
 }
 
 //----------------------------------------------------------------------
@@ -89,15 +89,15 @@ public protocol DDRManagedObject {
 /// provide default implementation of DDRManagedObject protocol methods
 public extension DDRManagedObject {
 
-    public static func entity(managedObjectContext: NSManagedObjectContext!) -> NSEntityDescription! {
-        return NSEntityDescription.entityForName(entityName(), inManagedObjectContext: managedObjectContext);
+    public static func entity(_ managedObjectContext: NSManagedObjectContext!) -> NSEntityDescription! {
+        return NSEntityDescription.entity(forEntityName: entityName(), in: managedObjectContext);
     }
 
-    public static func fetchRequest() -> NSFetchRequest {
+    public static func fetchRequest() -> NSFetchRequest<NSFetchRequestResult> {
         return NSFetchRequest(entityName: entityName())
     }
 
-    public static func instancesInManagedObjectContext(moc: NSManagedObjectContext, withPredicate predicate: NSPredicate?, sortedBy sortDescriptors : [NSSortDescriptor]?, catchError: Bool = true) throws -> [AnyObject] {
+    public static func instancesInManagedObjectContext(_ moc: NSManagedObjectContext, withPredicate predicate: NSPredicate?, sortedBy sortDescriptors : [NSSortDescriptor]?, catchError: Bool = true) throws -> [AnyObject] {
 
         // create a new fetch request using instance method
         let request = fetchRequest()
@@ -116,7 +116,7 @@ public extension DDRManagedObject {
         if catchError {
             // execute request
             do {
-                return try moc.executeFetchRequest(request)
+                return try moc.fetch(request)
             }
             catch let error as NSError {
                 print("Error loading \(request) \(predicate) \(error)")
@@ -124,18 +124,18 @@ public extension DDRManagedObject {
         }
 
         // if not catching error, execute here and return the result of the fetch request
-        return try moc.executeFetchRequest(request)
+        return try moc.fetch(request)
     }
 
-    public static func instancesInManagedObjectContext(moc: NSManagedObjectContext, withPredicate predicate: NSPredicate?, catchError: Bool = true) throws -> [AnyObject] {
+    public static func instancesInManagedObjectContext(_ moc: NSManagedObjectContext, withPredicate predicate: NSPredicate?, catchError: Bool = true) throws -> [AnyObject] {
         return try instancesInManagedObjectContext(moc, withPredicate: predicate, sortedBy: nil, catchError: catchError)
     }
 
-    public static func allInstancesInManagedObjectContext(moc: NSManagedObjectContext, sortedBy sortDescriptors: [NSSortDescriptor], catchError: Bool = true) throws -> [AnyObject] {
+    public static func allInstancesInManagedObjectContext(_ moc: NSManagedObjectContext, sortedBy sortDescriptors: [NSSortDescriptor], catchError: Bool = true) throws -> [AnyObject] {
         return try instancesInManagedObjectContext(moc, withPredicate: nil, sortedBy: sortDescriptors, catchError: catchError)
     }
 
-    public static func allInstancesInManagedObjectContext(moc : NSManagedObjectContext, catchError: Bool = true) throws -> [AnyObject]! {
+    public static func allInstancesInManagedObjectContext(_ moc : NSManagedObjectContext, catchError: Bool = true) throws -> [AnyObject]! {
         return try instancesInManagedObjectContext(moc, withPredicate: nil, sortedBy: nil, catchError: catchError)
     }
 
@@ -148,15 +148,15 @@ public extension DDRManagedObject {
         }
 
         let objectID = self.objectID
-        if objectID.temporaryID {
+        if objectID.isTemporaryID {
             print("cannot use objectID that is temporaryID; must save context first")
             return nil
         }
         var otherObject: NSManagedObject? = nil
-        otherMoc.performBlockAndWait {
+        otherMoc.performAndWait {
             var error: NSError? = nil
             do {
-                otherObject = try otherMoc.existingObjectWithID(objectID)
+                otherObject = try otherMoc.existingObject(with: objectID)
             } catch let error1 as NSError {
                 error = error1
                 otherObject = nil
@@ -173,9 +173,9 @@ public extension DDRManagedObject {
         return otherObject
     }
 
-    static func deleteObjectAndProcessPendingChanges(obj: NSManagedObject) {
+    static func deleteObjectAndProcessPendingChanges(_ obj: NSManagedObject) {
         let moc = obj.managedObjectContext!
-        moc.deleteObject(obj)
+        moc.delete(obj)
         moc.processPendingChanges()
     }
 
